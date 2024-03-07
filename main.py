@@ -5,15 +5,19 @@ import pandas as pd
 import numpy as np
 import sqlalchemy as sa
 import re
+import datetime
 
 #Functions
 def xlsx_files(path):
     money_files = []
     act_files = []
+    current_date = datetime.datetime.now().strftime('%Y-%m-%d')
 
     for file in os.listdir(path):
         full_path = os.path.join(path, file)
-        if file.lower().endswith('.xlsx'):
+        time = os.path.getctime(full_path)
+        file_date = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d')
+        if file.lower().endswith('.xlsx') and file_date == current_date:
             if file.lower().startswith('д'):
                 money_files.append(full_path)
             elif file.lower().startswith('у'):
