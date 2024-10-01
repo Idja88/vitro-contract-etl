@@ -11,6 +11,12 @@
 {
     "file_paths" : "",
     "table_names" : [""],
-    "connection_string" : ""
+    "connection_string" : "",
+    "mail_message": {
+        "from_email": "your@mail.com",
+        "to_emails": ["your@mail.com","your2@email.com"],
+        "smtp_server": "mail.server.com",
+        "smtp_port": 25
+    }
 }
 ```
