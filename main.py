@@ -6,6 +6,9 @@ import numpy as np
 import sqlalchemy as sa
 import re
 import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 #Functions
 def xlsx_files(path):
@@ -109,6 +112,21 @@ def connect_to_db(connection_string):
     connection = engine.raw_connection()
     return connection
 
+def send_email(subject, message, from_email, to_emails, smtp_server, smtp_port):
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        for to_email in to_emails:
+            msg = MIMEMultipart()
+            msg['From'] = from_email
+            msg['To'] = to_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(message, 'plain'))
+            server.send_message(msg)
+    except Exception as e:
+        print("Error sending email:", str(e))
+    finally:
+        server.quit()
+
 def main(cursor, file_paths, table_names):
     for (file_path, table_name) in zip(xlsx_files(file_paths), table_names):
         for file in file_path:
@@ -128,7 +146,10 @@ def main(cursor, file_paths, table_names):
             df.replace(r'^\s*$', None, regex=True, inplace=True)
             df.replace({np.nan: None}, inplace=True)
 
+            df['BusinessId'] = df['BusinessId'].fillna('').astype(str)
+            df['BusinessId'].replace(['0', '00'], '000000000000', inplace=True)
             df_clean = df[df["BusinessId"].str.isnumeric()].copy()
+
             df_clean['ContractNum'] = df_clean['ContractNum'].apply(lambda x: extract_number(x) if isinstance(x, str) else x)
             
             df_to_app = update_db(cursor, df_clean, table_name)
@@ -143,11 +164,19 @@ if __name__ == "__main__":
         file_paths = config['file_paths']
         table_names = config['table_names']
         connection_string = config['connection_string']
+        from_email = config['mail_message']['from_email']
+        to_emails = config['mail_message']['to_emails']
+        smtp_server = config['mail_message']['smtp_server']
+        smtp_port = config['mail_message']['smtp_port']
 
     connection = connect_to_db(connection_string)
     cursor = connection.cursor()
 
     try:
         main(cursor, file_paths, table_names)
+    except Exception as e:
+        error_message = f"An error occurred: {str(e)}"
+        send_email("Error in ETL process", error_message, from_email, to_emails, smtp_server, smtp_port)
+        raise SystemExit(1)
     finally:
         connection.close()
