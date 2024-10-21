@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import sqlalchemy as sa
 import re
-import datetime
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -14,13 +14,12 @@ from email.mime.multipart import MIMEMultipart
 def xlsx_files(path):
     money_files = []
     act_files = []
-    current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    prev_date = datetime.now() - timedelta(days=1)
+    prev_date_str = prev_date.strftime('%Y%m%d')
 
     for file in os.listdir(path):
         full_path = os.path.join(path, file)
-        time = os.path.getctime(full_path)
-        file_date = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d')
-        if file.lower().endswith('.xlsx') and file_date == current_date:
+        if file.lower().endswith(f'{prev_date_str}.xlsx'):
             if file.lower().startswith('д'):
                 money_files.append(full_path)
             elif file.lower().startswith('у'):
