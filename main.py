@@ -28,20 +28,30 @@ def xlsx_files(path):
 
 def extract_number(text):
     patterns = [
-        r'([\w\d/-]+)\s(?:Д[.,])',
-        r'([\w\d/-]+)\s(?:Д)',
-        r'([\w\d/-]+)\s(?:от)',
-        r'№\s?([\w\d/-]+)',
-        r'№\s\s?([\w\d/-]+)',
-        r'№([\w\d/-]+)',
+        r'^(?:№)?(\d+(?:[/-][\d]+)+)\s+[дД][\.,]\s*с\.',
+        r'(?:договор).*?№\s*((?:[\w-]+(?:\s*[-]\s*[\d]+)?(?:[/-][\d]+)*)+)',
+        r'№\s*([\w\d/-]+)(?:\s+от\s+[\d\.]+)',
+        r'№\s*([\w\d/-]+)',
+        r'^([\w\d/-]+)$'
     ]
+
+    if not any(marker in text.upper() for marker in ['№', 'ДОГОВОР', ' Д.', ' Д,']):
+        return text
+
+    if text.count('№') > 1:
+        if text.startswith('№'):
+            text = text[1:].lstrip()
+        parts = text.split('№', 1)
+        first_part = parts[0].strip()
+        if not any(marker in first_part.upper() for marker in ['ДОГОВОР', 'Д.С.', 'Д,С.']):
+            space_before_num = ' ' if ' №' in text else ''
+            return first_part + space_before_num + '№' + parts[1].strip()
+        return parts[1].strip()
 
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             return match.group(1).strip()
-
-    return text
 
 def check_if_exists(cursor, row, table_name):
     DocumentId = row['DocumentId']
