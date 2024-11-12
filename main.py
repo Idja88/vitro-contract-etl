@@ -35,9 +35,6 @@ def extract_number(text):
         r'^([\w\d/-]+)$'
     ]
 
-    if not any(marker in text.upper() for marker in ['№', 'ДОГОВОР', ' Д.', ' Д,']):
-        return text
-
     if text.count('№') > 1:
         if text.startswith('№'):
             text = text[1:].lstrip()
@@ -156,7 +153,7 @@ def main(cursor, file_paths, table_names):
             df.replace({np.nan: None}, inplace=True)
 
             df['BusinessId'] = df['BusinessId'].fillna('').astype(str)
-            df['BusinessId'].replace(['0', '00'], '000000000000', inplace=True)
+            df['BusinessId'].replace(['','0','00'], '000000000000', inplace=True)
             df_clean = df[df["BusinessId"].str.isnumeric()].copy()
 
             df_clean['ContractNum'] = df_clean['ContractNum'].apply(lambda x: extract_number(x) if isinstance(x, str) else x)
