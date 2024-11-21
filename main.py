@@ -26,6 +26,13 @@ def xlsx_files(path):
                 act_files.append(full_path)
     return money_files, act_files
 
+def extract_date(text):
+    match = re.search(r'_(\d{8})_', text)
+    first_date = match.group(1)
+    first_date_obj = datetime.strptime(first_date, "%Y%m%d")
+    first_date_str = first_date_obj.strftime("%d.%m.%Y")
+    return first_date_str
+
 def extract_number(text):
     patterns = [
         r'^(?:№)?(\d+(?:[/-][\d]+)+)\s+[дД][\.,]\s*с\.',
@@ -49,6 +56,13 @@ def extract_number(text):
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             return match.group(1).strip()
+        
+def delete_from_table(cursor, table_name, start_date_str):
+    if table_name == 'moneytable':
+        query = f"DELETE FROM {table_name} WHERE PaymentDate >= '{start_date_str}'"
+    elif table_name == 'acttable':
+        query = f"DELETE FROM {table_name} WHERE ActDate >= '{start_date_str}'"
+    cursor.execute(query)
 
 def check_if_exists(cursor, row, table_name):
     DocumentId = row['DocumentId']
@@ -136,6 +150,9 @@ def send_email(subject, message, from_email, to_emails, smtp_server, smtp_port):
 def main(cursor, file_paths, table_names):
     for (file_path, table_name) in zip(xlsx_files(file_paths), table_names):
         for file in file_path:
+
+            start_date = extract_date(file)
+
             df = pd.read_excel(file, dtype={'№ Договора': str, '№ Проекта': str, '№ АВР': str})
 
             df.columns = df.columns.str.replace("БИН", "BusinessId")
@@ -158,6 +175,7 @@ def main(cursor, file_paths, table_names):
 
             df_clean['ContractNum'] = df_clean['ContractNum'].apply(lambda x: extract_number(x) if isinstance(x, str) else x)
             
+            delete_from_table(cursor, table_name, start_date)
             df_to_app = update_db(cursor, df_clean, table_name)
             append_from_df_to_db(cursor, df_to_app, table_name)
 
